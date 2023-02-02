@@ -53,55 +53,33 @@ void ctb_t::write_large_preview(std::vector<uint8_t>& out) {
 
 	header.image_offset = out.size();
 
-	size_t in_buffer_size = 400 * 300 * 3;
-	uint8_t in_buffer[in_buffer_size];
+	uint32_t desired_image_x = 400;
+	uint32_t desired_image_y = 300;
 
-	size_t transform_buffer_size = 400 * 300 * 3;
-	uint8_t transform_buffer[transform_buffer_size];
+	std::vector<uint8_t> image_buffer;
+	if (this->number_of_layers != 0) {
+		image_buffer = this->layer_images[0];
+	}
+	else {
+		image_buffer = std::vector<uint8_t>(this->resolution_x * this->resolution_y, 0);
+	}
+
+	std::vector<uint8_t> transform_buffer(desired_image_x * desired_image_y * 3, 0);
 
 	// crop and resize
-	// Verbatum stolen from https://github.com/oelmekki/sl1toctb  convert.c
-	int y = 0;
-	int x = -1;
-	int out_y = 0;
-	int out_x = -1;
-	for (size_t i = 0; i < in_buffer_size; i+=4) {
-		x++;
-		if (x == 800)
-			{
-				x = 0;
-				y++;
-			}
-
-		if (y % 2 > 0)
-			continue;
-
-		if (x % 2 > 0)
-			continue;
-
-		out_x++;
-		if (out_x == 400)
-			{
-				out_x = 0;
-				out_y++;
-			}
-
-		transform_buffer[(30+out_y)*1200+out_x*3] = in_buffer[i];
-		transform_buffer[(30+out_y)*1200+out_x*3+1] = in_buffer[i+1];
-		transform_buffer[(30+out_y)*1200+out_x*3+2] = in_buffer[i+2];
-	}
+	rle_helper::resize_raw_image(image_buffer, transform_buffer, this->resolution_x, this->resolution_y, desired_image_x, desired_image_y);
 
 	std::vector<uint8_t> preview_buffer;
 
 
-	rle15::encode(transform_buffer, transform_buffer_size, preview_buffer);
+	rle15::encode(transform_buffer, preview_buffer);
 
 	// Append
 	out.insert(out.end(), preview_buffer.begin(), preview_buffer.end());
 
 	header.image_length = preview_buffer.size();
-	header.resolution_x = 400;
-	header.resolution_y = 300;
+	header.resolution_x = desired_image_x;
+	header.resolution_y = desired_image_y;
 
 
 	for (int i = this->headers.large_preview_offset, j = 0; j < sizeof(ctb_preview_t); i++, j++) {
@@ -133,56 +111,23 @@ void ctb_t::write_small_preview(std::vector<uint8_t>& out) {
 	uint32_t desired_image_x = 200;
 	uint32_t desired_image_y = 125;
 
-	size_t in_buffer_size = desired_image_x * desired_image_y * 3;
-	uint8_t in_buffer[in_buffer_size];
+	std::vector<uint8_t> image_buffer;
+	if (this->number_of_layers != 0) {
+		image_buffer = this->layer_images[0];
+	}
+	else {
+		image_buffer = std::vector<uint8_t>(desired_image_x * desired_image_y * 3, 0);
+	}
 
-	size_t transform_buffer_size = desired_image_x * desired_image_y * 3;
-	uint8_t transform_buffer[transform_buffer_size];
+	std::vector<uint8_t> transform_buffer(desired_image_x * desired_image_y * 3, 0);
 
 	// crop and resize
-	// Verbatum stolen from https://github.com/oelmekki/sl1toctb  convert.c
-	int y = 0;
-	int x = -1;
-	int out_y = 0;
-	int out_x = -1;
-
-	for (size_t i = 0; i < in_buffer_size; i+=4)
-		{
-			x++;
-			if (x == 400)
-				{
-					x = 0;
-					y++;
-				}
-
-			if (y % 2 > 0)
-				continue;
-
-			if (x % 2 > 0)
-				continue;
-
-			if (y < 75)
-				continue;
-
-			if (y > 325)
-				continue;
-
-			out_x++;
-			if (out_x == 400)
-				{
-					out_x = 0;
-					out_y++;
-				}
-
-			transform_buffer[out_y*1200+out_x*3] = in_buffer[i];
-			transform_buffer[out_y*1200+out_x*3+1] = in_buffer[i+1];
-			transform_buffer[out_y*1200+out_x*3+2] = in_buffer[i+2];
-		}
+	rle_helper::resize_raw_image(image_buffer, transform_buffer, this->resolution_x, this->resolution_y, desired_image_x, desired_image_y);
 
 	std::vector<uint8_t> preview_buffer;
 
 
-	rle15::encode(transform_buffer, transform_buffer_size, preview_buffer);
+	rle15::encode(transform_buffer, preview_buffer);
 
 	// Append
 	out.insert(out.end(), preview_buffer.begin(), preview_buffer.end());

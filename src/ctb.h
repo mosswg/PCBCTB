@@ -12,7 +12,7 @@
 
 const float LIGHT_OFF_S = 1;
 
-const float PCB_EXPOSURE_TIME_S = 15;
+const float PCB_EXPOSURE_TIME_S = 64;
 
 const uint32_t DEFAULT_NUMBER_OF_LAYERS = 1;
 
@@ -200,7 +200,10 @@ class ctb_t {
 		this->resolution_y = printer_type.get_resolution_y();
 	}
 
-	inline void append_layer_image(std::vector<uint8_t>& image, float height_mm) {
+	inline void append_layer_image(std::vector<uint8_t> image, float height_mm, bool invert) {
+		if (invert) {
+			rle_helper::invert_image(image, this->resolution_x, this->resolution_y);
+		}
 		this->layer_images.push_back(image);
 		this->layer_heights.push_back(height_mm);
 		this->number_of_layers++;
